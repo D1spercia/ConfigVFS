@@ -1,0 +1,10 @@
+path;type;content
+etc;dir;
+etc/config;dir;
+etc/config/service.conf;file;version=1.0
+home;dir;
+home/user;dir;
+home/user/documents;dir;
+home/user/documents/report.txt;file;This is my report.
+home/user/photos;dir;
+home/user/photos/image.jpg;file;iVBORw0KGgoAAAANSUhE
