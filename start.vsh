@@ -1,32 +1,66 @@
-# стартовый скрипт для VFS
+# стартовый скрипт для vfs
 
-ls
-ls home
-ls /etc
-cd home/user/documents
-ls report.txt
+# 1. тестирование команды date
+date
+
+# 2. тестирование команды history
+# сначала должна показать только date
+history
+
+# 3. тестирование команды cd
+# абсолютный переход
+cd /home/user
+ls 
+# проверим, что мы в /home/user (должно показать documents, photos)
+
+# отнотсительный переход с .. и .
+cd ../user/./documents
+ls 
+# проверим, что мы в /home/user/documents (должно показать report.txt)
+
+# обработка ошибки: попытка перейти в файл
+cd report.exe
+
+# Обработка ошибки: несуществующий путь
+cd /nonexistent/path
+
+# возвращаемся в корень
 cd /
+ls 
+# должно показать etc home
 
+# 4. тестирование команды ls
+# ls в текущей директории (корень)
+ls
+
+# ls по абсолютному пути
+ls /etc/config
+
+# ls с переменной окружения
+ls $HOME 
+
+# обработка ошибки: несуществующий путь
 ls /nonexistent/folder
 
-cd home/user
-ls
+# 5. тестирование команды  tree
+# tree из корня (покажет всё дерево)
+tree
 
-cd ..
-ls
-
-cd /
-ls
-
+# tree  из конкретной директории (отнотсительный путь)
 cd home
-ls .
-cd .
+tree user
 
-cd /home/user/documents/report.txt
-ls
+# tree с абсолютным путём
+tree /etc
 
-cd non_existent_dir
+# обработка ошибки: tree для файла
+tree /etc/config/service.conf
 
-ls $HOME
+# Обработка ошибки: tree для несуществующего пути
+tree /home/temp/
+
+# финальная проверка history
+# команда должна показать все команды, введенные в скрипте
+history
 
 exit

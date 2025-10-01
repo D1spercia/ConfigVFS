@@ -4,6 +4,10 @@ import argparse
 import csv
 import base64
 from io import StringIO
+from datetime import datetime
+import sys
+
+command_history = []
 
 class VFS:
     def __init__(self):
@@ -124,6 +128,8 @@ def get_home_dir():
     return os.getenv('HOME') or os.getenv('USERPROFILE')
 
 def commParser(comm):
+    command_history.append(comm.strip())
+
     parts = shlex.split(comm) # умное разделение, считает всё в кавычках как один элемент, пробелами разделяет элементы
     if len(parts) == 0:
         return None, []
@@ -148,6 +154,88 @@ def commParser(comm):
         else: # обычный аргумент
             processed_args.append(arg)
     return command, processed_args
+
+def date_comm(args):
+    # выводит текущую дату и время
+    now = datetime.now()
+    print(now.strftime("%a %b %d %H: %M: %S: %Z %Y"))
+
+def history_comm(args):
+    # выводит список ранее введённых команд
+    if not command_history:
+        print("История команд пуста")
+        return
+    
+    # выводим историю, нумеруя с 1
+    for i, cmd in enumerate(command_history, 1):
+        if cmd and not cmd.startswith('#'):
+            print(f"{i: 4} {cmd}")
+            # history_comm может выводить себя, так как она тоже была введена
+
+def _print_tree_recursive(node, prefix, vfs, path_parts):
+    # рекурсивная функция для отрисовки дерева
+    # получаем имена дочерних элементов и сортируем их
+    children_names = sorted(node.get('children', {}).keys())
+
+    for i, name in enumerate(children_names):
+        is_last = (i == len(children_names)-1)
+        
+        #выбираем правильный символ для ветки
+        branch = "└── " if is_last else "├── "
+
+        # рекурсивеый префикс для отступов
+        next_prefix = prefix + ("    " if is_last else "|   ")
+
+        child_node = node['children'][name]
+
+        # формируем полный путь для отображения
+        full_path = path_parts + [name]
+
+        # вывод текущего элемента
+        print(f"{prefix}{branch}{name}")
+
+        # если это директория, рекурсивно вызываем для её содержимого
+        if child_node['type'] == 'dir':
+            _print_tree_recursive(child_node, next_prefix, vfs, full_path)
+
+def tree_comm(args, vfs):
+    # выводит содержимое директории в виде дерева
+    path = args[0] if args else None
+
+    if path == None:
+        target_path_parts = vfs.current_path
+    else:
+        target_path_parts = vfs._normalize_path(path)
+
+    target_dir = vfs._find_node(target_path_parts)
+
+    if target_dir == None:
+        print(f"tree: '{path}': No such file or directory")
+        return
+    
+    if target_dir['type'] != 'dir':
+        print(f"tree: '{path}' is not a directory")
+        return
+
+    # отображаем имя стартовой директории
+    start_dir_name = "/" if not target_path_parts else target_path_parts[-1]
+    print(start_dir_name)
+
+    # запускаем рекурсивный обход
+    _print_tree_recursive(target_dir, "", vfs, target_path_parts) 
+
+def ls_comm(args, vfs):
+    contents = vfs.list_dir(args[0] if args else None)
+    if contents is not None:
+        print(' '.join(contents))
+
+def cd_comm(args, vfs):
+    target_path = args[0] if args else ''
+    vfs.change_dir(target_path)
+
+def exit_comm(args):
+    print("Выход из программы.")
+    raise SystemExit
 
 # Выполняет команды из файла, имитируя диалог
 def execute_script(script_path, commands_dict):
@@ -186,22 +274,6 @@ def execute_script(script_path, commands_dict):
     print("\n--- Скрипт завершён ---\n")
 
 
-#функции команд
-def ls_comm(args, vfs):
-    contents = vfs.list_dir(args[0] if args else None)
-    if contents is not None:
-        print(' '.join(contents))
-
-def cd_comm(args, vfs):
-    target_path = args[0] if args else ''
-    vfs.change_dir(target_path)
-
-def exit_comm(args):
-    print("Выход из программы.")
-    raise SystemExit
-
-
-
 def main():
     parser = argparse.ArgumentParser(description="Эмулятор языка оболочки ОС (VFS Shell)")
 
@@ -232,6 +304,9 @@ def main():
     commands = {
     'ls' : lambda a: ls_comm(a, vfs),
     'cd' : lambda a: cd_comm(a, vfs),
+    'date' : date_comm,
+    'history' : history_comm,
+    'tree' : lambda a: tree_comm(a, vfs),
     'exit' : exit_comm
 }
 
