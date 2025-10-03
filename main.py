@@ -10,7 +10,7 @@ import sys
 command_history = []
 
 class VFS:
-    def __init__(self):
+    def __init__(self): # конструктор класса
         self.root = {'type': 'dir', 'children': {}}
         self.current_path = [] # Путь к текущей директории
 
@@ -19,14 +19,14 @@ class VFS:
         self.root = {'type': 'dir', 'children': {}}
         try:
             with open(csv_file_path, 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f, delimiter=';')
-                for row in reader:
-                    path_parts = row['path'].strip('/').split('/')
+                reader = csv.DictReader(f, delimiter=';') # считывает первую строку, составляя из неё ключи
+                for row in reader: # считывает последующие строки
+                    path_parts = row['path'].strip('/').split('/') # разделяет путь на части
                     current_dir = self.root
                     for part in path_parts:
                         if part not in current_dir['children']:
-                            current_dir['children'][part] = {'type': 'dir', 'children': {}}
-                        current_dir = current_dir['children'][part]
+                            current_dir['children'][part] = {'type': 'dir', 'children': {}} # создаёт в ключе children значение part
+                        current_dir = current_dir['children'][part] # перемещаемся в нужную директорию(вниз по дереву)
 
                     #теперь current_dir это нужный нам элемент
                     if row['type'] == 'file':
@@ -57,7 +57,7 @@ class VFS:
         if target_dir and target_dir['type'] == 'dir':
             return list(target_dir['children'].keys())
         
-        return [target_path_parts[-1]] if target_path_parts else None
+        return [target_path_parts[-1]] if target_path_parts else None # возвращает последний элемент из списка(файл)
     
     def _normalize_path(self, path_str):
         # Преобразует строку пути (относительную и абсолютную) в нормализованный список компонентов, обрабатывая '.' и '..'
@@ -68,10 +68,10 @@ class VFS:
             current_path_copy = []
         else:
             # относительный путь начинается с текущего
-            current_path_copy = self.current_path[:]
+            current_path_copy = self.current_path[:] # создаём копию пути (если бы было = self.current_path, то мы бы создали ссылку на список пути и, если бы взаимодействовали с current_path_copy, то это влияло бы и на self.current_path)
 
         # Разбиваем путь, удаляя пустые части (для /a//b или /)
-        raw_parts = [p for p in path_str.split('/') if p]
+        raw_parts = [p for p in path_str.split('/') if p] # фильтрация пустых элементов, полученных из списка после метода split
 
         # Обрабатываем '..' и '.'
         for part in raw_parts:
@@ -123,22 +123,64 @@ class VFS:
         # Обновляем текущий путь
         self.current_path = target_path_parts
         return True
+    
+    def _create_node(self, path_parts, node_type, content=None):
+        # создаёт новый узел (файл или директорию) по заданному нормализованному пути.
+        # возвращает созданный узел или None, если родительский путь не существует или если узел с таким именем уже существует, но имеет другой тип
+        
+        if not path_parts:
+            # нельзя создать узел в корне, кроме как саму корневую директорию, но это не нужно т.к. корень уже есть
+            return None
+        
+        parent_parts = path_parts[:-1] # получаем новый список, который содержит все элементы, кроме последнего элемента исходного списка путём среза
+        name = path_parts[-1] # берём последний элемент из исходного списка
+
+        # 1. находим родительскую директорию
+        parent_node = self._find_node(parent_parts)
+
+        if parent_node is None:
+            # Родительский путь не существует
+            return None
+        
+        if parent_node['type'] != 'dir':
+            # Родительский узел не является директорией (нельзя создать файл внутри файла)
+            return None
+        
+        # 2. Проверяем, существует ли узел уже
+        if name in parent_node['children']:
+            # Если узел уже существует, команда touch просто обновляет его
+            # (в нашем случае возвращаем пустой узел)
+            existing_node = parent_node['children'][name]
+            if existing_node['type'] == 'dir' and node_type == 'file':
+                # нельзя переписать директорию файлом
+                return None
+            return existing_node
+
+        # 3. создаём новый узел
+        new_node = {'type': node_type}
+        if node_type == 'file':
+            new_node['content'] = content if content != None else ""
+        elif node_type == 'dir':
+            new_node['children'] = {}
+
+        parent_node['children'][name] = new_node
+        return new_node
 
 def get_home_dir():
     return os.getenv('HOME') or os.getenv('USERPROFILE')
 
 def commParser(comm):
-    command_history.append(comm.strip())
+    command_history.append(comm.strip()) # strip() удаляет лишние пробелы. пример: "   ls -l" -> "ls -l"
 
-    parts = shlex.split(comm) # умное разделение, считает всё в кавычках как один элемент, пробелами разделяет элементы
+    parts = shlex.split(comm) # создаём список из введённой команды. умное разделение, считает всё в кавычках как один элемент, пробелами разделяет элементы
     if len(parts) == 0:
         return None, []
-    command = parts[0]
-    args = parts[1:]
+    command = parts[0] # берём первый элемент из списка
+    args = parts[1:] # берём все аргументы (список, начиная со второго элемента)
 
     processed_args = []
 
-    for arg in args:
+    for arg in args: # запускаем обработку команд и, если нужно, подставляем переменные окружения в аргументы команды
         if arg == '$HOME':
             vfs_home = '/home/user'
             processed_args.append(vfs_home)
@@ -158,7 +200,7 @@ def commParser(comm):
 def date_comm(args):
     # выводит текущую дату и время
     now = datetime.now()
-    print(now.strftime("%a %b %d %H: %M: %S: %Z %Y"))
+    print(now.strftime("%a %b %d %H: %M: %S: %Z %Y")) # строка %день недели %сокращённое название месяца %день месяца %час в 24 часовом формате %минуты %секунды %временная зона(в Windows может быть пусто) %год
 
 def history_comm(args):
     # выводит список ранее введённых команд
@@ -169,7 +211,7 @@ def history_comm(args):
     # выводим историю, нумеруя с 1
     for i, cmd in enumerate(command_history, 1):
         if cmd and not cmd.startswith('#'):
-            print(f"{i: 4} {cmd}")
+            print(f"{i: 4} {cmd}") #i: 4 - выводимое число i занимает минимум 4 символа в ширину
             # history_comm может выводить себя, так как она тоже была введена
 
 def _print_tree_recursive(node, prefix, vfs, path_parts):
@@ -224,6 +266,29 @@ def tree_comm(args, vfs):
     # запускаем рекурсивный обход
     _print_tree_recursive(target_dir, "", vfs, target_path_parts) 
 
+def touch_comm(args, vfs):
+    # создаёт файл, если он не существует
+    if not args:
+        print("touch: требуется операнд файла")
+        return
+    
+    path_str = args[0]
+
+    target_path_parts = vfs._normalize_path(path_str)
+
+    if not target_path_parts:
+        print("touch: неверный путь")
+        return
+    
+    # создаём (или находим) узел
+    # touch создаёт файл, поэтому node_type='file'
+    result_node = vfs._create_node(target_path_parts, 'file', content="")
+
+    if result_node is None:
+        print(f"touch: невозможно создать файл '{path_str}': no such file or directory or target is directory")
+    else:
+        pass # успех
+
 def ls_comm(args, vfs):
     contents = vfs.list_dir(args[0] if args else None)
     if contents is not None:
@@ -275,8 +340,9 @@ def execute_script(script_path, commands_dict):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Эмулятор языка оболочки ОС (VFS Shell)")
+    parser = argparse.ArgumentParser(description="Эмулятор языка оболочки ОС (VFS Shell)") # создаём объект, который будет отвечать за обработку аргументов, переданных программе через командную строку
 
+    # добавляем команды в объект парсер
     # путь к физическому расположение VFS
     parser.add_argument('-v', '--vfs-path', 
                         required=True, # теперь путь к CSV обязателен 
@@ -286,7 +352,7 @@ def main():
                         default=None, 
                         help='Путь к стартовому скрипту для выполнения команд')
     
-    args = parser.parse_args()
+    args = parser.parse_args() # считываем аргументы. в args будет объект, у которого аргументы будут храниться в виде атрибутов, названных по длинным именам аргументов
 
     print("--- Параметры запуска ---")
     print(f"VFS Path:{args.vfs_path}")
@@ -301,12 +367,14 @@ def main():
         print(e)
         return # Завершаем, если не удалось загрузить VFS
 
+    # лямбда-функции, которые получают аргументы и передают их в вызываемые функции
     commands = {
     'ls' : lambda a: ls_comm(a, vfs),
     'cd' : lambda a: cd_comm(a, vfs),
     'date' : date_comm,
     'history' : history_comm,
     'tree' : lambda a: tree_comm(a, vfs),
+    'touch' : lambda a: touch_comm(a, vfs),
     'exit' : exit_comm
 }
 

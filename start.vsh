@@ -1,66 +1,62 @@
-# стартовый скрипт для vfs
+# --- СТАРТОВЫЙ СКРИПТ VFS-SHELL (stage5_start.vsh) ---
+# Запуск: python main.py -v vfs_max.csv -s stage5_start.vsh
 
-# 1. тестирование команды date
-date
-
-# 2. тестирование команды history
-# сначала должна показать только date
-history
-
-# 3. тестирование команды cd
-# абсолютный переход
+# 1. ПОДГОТОВКА СРЕДЫ
 cd /home/user
 ls 
-# проверим, что мы в /home/user (должно показать documents, photos)
+# Ожидаем: documents photos
 
-# отнотсительный переход с .. и .
-cd ../user/./documents
-ls 
-# проверим, что мы в /home/user/documents (должно показать report.txt)
+# 2. ТЕСТИРОВАНИЕ КОМАНДЫ TOUCH (Создание файлов)
 
-# обработка ошибки: попытка перейти в файл
-cd report.exe
-
-# Обработка ошибки: несуществующий путь
-cd /nonexistent/path
-
-# возвращаемся в корень
-cd /
-ls 
-# должно показать etc home
-
-# 4. тестирование команды ls
-# ls в текущей директории (корень)
+# 2.1 Создание нового файла в текущей директории
+touch new_file_1.txt
 ls
+# Ожидаем: documents photos new_file_1.txt
 
-# ls по абсолютному пути
+# 2.2 Создание файла в поддиректории (относительный путь)
+touch documents/doc_a.txt
+tree documents
+# Ожидаем: documents/
+#          ├── doc_a.txt
+#          └── report.txt
+
+# 2.3 Создание файла в другой ветке (абсолютный путь)
+touch /etc/new_config.cfg
+cd /etc
+ls
+# Ожидаем: config new_config.cfg
+
+# 2.4 Использование touch на существующем файле (ничего не происходит, но нет ошибки)
+touch /etc/config/service.conf
 ls /etc/config
+# Ожидаем: service.conf
 
-# ls с переменной окружения
-ls $HOME 
+# 2.5 Использование touch с путем, содержащим . и ..
+touch ../home/user/temp_file.tmp
+ls /home/user
+# Ожидаем: documents photos new_file_1.txt temp_file.tmp
 
-# обработка ошибки: несуществующий путь
-ls /nonexistent/folder
+# 3. ТЕСТИРОВАНИЕ TOUCH (Обработка ошибок)
+cd /home/user
 
-# 5. тестирование команды  tree
-# tree из корня (покажет всё дерево)
+# 3.1 Ошибка: Отсутствие аргументов
+touch
+
+# 3.2 Ошибка: Создание файла, если родительская директория не существует
+touch /home/non_existent_dir/file.txt
+
+# 3.3 Ошибка: Попытка создать файл с именем существующей директории
+touch documents
+
+# 3.4 Ошибка: Попытка создать файл внутри файла
+touch documents/report.txt/file_inside_file.txt
+
+# 4. ФИНАЛЬНАЯ ПРОВЕРКА СОСТОЯНИЯ VFS
+cd /
 tree
 
-# tree  из конкретной директории (отнотсительный путь)
-cd home
-tree user
-
-# tree с абсолютным путём
-tree /etc
-
-# обработка ошибки: tree для файла
-tree /etc/config/service.conf
-
-# Обработка ошибки: tree для несуществующего пути
-tree /home/temp/
-
-# финальная проверка history
-# команда должна показать все команды, введенные в скрипте
+# 5. ПРОВЕРКА HISTORY
 history
 
+# 6. ВЫХОД
 exit
