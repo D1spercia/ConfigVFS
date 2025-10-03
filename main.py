@@ -5,7 +5,6 @@ import csv
 import base64
 from io import StringIO
 from datetime import datetime
-import sys
 
 command_history = []
 

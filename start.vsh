@@ -51,12 +51,15 @@ touch documents
 # 3.4 Ошибка: Попытка создать файл внутри файла
 touch documents/report.txt/file_inside_file.txt
 
-# 4. ФИНАЛЬНАЯ ПРОВЕРКА СОСТОЯНИЯ VFS
+# 4. Тест времени
+date
+
+# 5. ФИНАЛЬНАЯ ПРОВЕРКА СОСТОЯНИЯ VFS
 cd /
 tree
 
-# 5. ПРОВЕРКА HISTORY
+# 6. ПРОВЕРКА HISTORY
 history
 
-# 6. ВЫХОД
+# 7. ВЫХОД
 exit
